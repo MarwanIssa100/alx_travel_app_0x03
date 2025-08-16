@@ -5,6 +5,7 @@ from .views import ListingViewSet, BookingViewSet
 router = DefaultRouter()
 router.register(r'listings', ListingViewSet)
 router.register(r'bookings', BookingViewSet)
+router.register(r'payments', PaymentViewSet)
 
 urlpatterns = [
     path('', include(router.urls)),

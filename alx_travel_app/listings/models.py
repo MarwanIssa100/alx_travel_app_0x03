@@ -18,3 +18,13 @@ class Booking(models.Model):
 
     def __str__(self):
         return f"Booking for {self.listing.title} by {self.user}"
+    
+class Payment(models.Model):
+    transaction_id = models.CharField(max_length=100, unique=True)
+    booking = models.ForeignKey(Booking, on_delete=models.CASCADE)
+    amount = models.DecimalField(max_digits=10, decimal_places=2)
+    payment_date = models.DateTimeField(auto_now_add=True)
+    status = models.CharField(max_length=20)  # e.g., 'Pending', 'Completed', 'Failed'
+
+    def __str__(self):
+        return f"Payment of {self.amount} for {self.booking.listing.title} on {self.payment_date}"
