@@ -3,6 +3,7 @@ from rest_framework import viewsets, status
 from rest_framework.response import Response
 from .models import Listing , Booking ,Payment
 from .serializers import ListingSerializer, BookingSerializer, PaymentSerializer
+from .tasks import send_booking_confirmation_email, send_payment_confirmation_email
 import requests
 import json
 
@@ -15,6 +16,20 @@ class ListingViewSet(viewsets.ModelViewSet):
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
+    
+    def create(self, request, *args, **kwargs):
+        # Call the parent create method
+        response = super().create(request, *args, **kwargs)
+        
+        # If booking was created successfully, trigger the email task
+        if response.status_code == status.HTTP_201_CREATED:
+            booking_id = response.data.get('id')
+            if booking_id:
+                # Trigger the email task asynchronously
+                send_booking_confirmation_email.delay(booking_id)
+                print(f"Booking confirmation email task triggered for booking {booking_id}")
+        
+        return response
     
 class PaymentViewSet(viewsets.ModelViewSet):
     queryset = Payment.objects.all()
@@ -80,6 +95,12 @@ class PaymentViewSet(viewsets.ModelViewSet):
                 serializer = self.get_serializer(data=payment_data)
                 if serializer.is_valid():
                     payment = serializer.save()
+                    
+                    # Trigger payment confirmation email task
+                    payment_id = payment.id
+                    send_payment_confirmation_email.delay(payment_id)
+                    print(f"Payment confirmation email task triggered for payment {payment_id}")
+                    
                     return Response(serializer.data, status=status.HTTP_201_CREATED)
                 else:
                     return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
